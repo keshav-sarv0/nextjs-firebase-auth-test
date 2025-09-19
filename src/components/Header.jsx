@@ -8,13 +8,31 @@ import {
 } from "@/src/lib/firebase/auth.js";
 import { addFakeRestaurantsAndReviews } from "@/src/lib/firebase/firestore.js";
 import { setCookie, deleteCookie } from "cookies-next";
+import { useState } from "react";
 
 function useUserSession(initialUser) {
-  return;
+  // ...existing code...
+  const [user, setUser] = useState();
+
+  useEffect(() => {
+    return onIdTokenChanged(async (u) => {
+      if (u) {
+        const idToken = await u.getIdToken();
+        await setCookie("__session", idToken);
+      } else {
+        await deleteCookie("__session");
+      }
+
+      // update React state instead of forcing a reload
+      setUser(u);
+    });
+  }, []);
+
+  return user;
 }
 
-export default function Header({ initialUser }) {
-  const user = useUserSession(initialUser);
+export default function Header() {
+  const user = useUserSession();
 
   const handleSignOut = (event) => {
     event.preventDefault();
