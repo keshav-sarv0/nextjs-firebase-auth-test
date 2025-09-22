@@ -1,30 +1,47 @@
 "use client";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   signInWithGoogle,
   signOut,
   onIdTokenChanged,
+  onAuthStateChanged,
 } from "@/src/lib/firebase/auth.js";
 import { addFakeRestaurantsAndReviews } from "@/src/lib/firebase/firestore.js";
-import { setCookie, deleteCookie } from "cookies-next";
-import { useState } from "react";
+// ...existing code...
 
-function useUserSession(initialUser) {
-  // ...existing code...
-  const [user, setUser] = useState();
+function useUserSession() {
+  const [user, setUser] = useState(null);
 
+  // Keep server session cookie in sync when ID token changes or refreshes
   useEffect(() => {
     return onIdTokenChanged(async (u) => {
       if (u) {
         const idToken = await u.getIdToken();
-        await setCookie("__session", idToken);
-      } else {
-        await deleteCookie("__session");
-      }
+        try {
+          await fetch('/api/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken }),
+          });
 
-      // update React state instead of forcing a reload
-      setUser(u);
+          setUser({
+            uid: u.uid,
+            email: u.email,
+            displayName: u.displayName,
+            photoURL: u.photoURL,
+          });
+        } catch (e) {
+          console.error('Failed to create server session', e);
+        }
+      } else {
+        try {
+          await fetch('/api/session', { method: 'DELETE' });
+          setUser(null);
+        } catch (e) {
+          console.error('Failed to clear server session', e);
+        }
+      }
     });
   }, []);
 
@@ -54,7 +71,7 @@ export default function Header() {
         <>
           <div className="profile">
             <p>
-              <img
+       <img
                 className="profileImage"
                 src={user.photoURL || "/profile.svg"}
                 alt={user.email}

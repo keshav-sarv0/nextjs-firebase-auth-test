@@ -13,12 +13,19 @@ export const metadata = {
 
 export default async function RootLayout({ children }) {
   const { currentUser } = await getAuthenticatedAppForUser();
-  console.log("Current user in layout:", currentUser);
+  const initialUser = currentUser
+    ? {
+        uid: currentUser.uid,
+        email: currentUser.email,
+        displayName: currentUser.displayName,
+        photoURL: currentUser.photoURL,
+      }
+    : null;
+
   return (
     <html lang="en">
       <body>
-        {/* <Header initialUser={currentUser?.toJSON()} /> */}
-        <Header/>
+        <Header initialUser={initialUser} />
 
         <main>{children}</main>
       </body>
